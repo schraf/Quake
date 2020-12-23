@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -48,7 +48,7 @@ int WIPX_Init (void)
 	struct qsockaddr addr;
 	char	*p;
 	int		r;
-	WORD	wVersionRequested; 
+	WORD	wVersionRequested;
 
 	if (COM_CheckParm ("-noipx"))
 		return -1;
@@ -59,7 +59,7 @@ int WIPX_Init (void)
 
 	if (winsock_initialized == 0)
 	{
-		wVersionRequested = MAKEWORD(1, 1); 
+		wVersionRequested = MAKEWORD(1, 1);
 
 		r = pWSAStartup (MAKEWORD(1, 1), &winsockdata);
 
@@ -243,16 +243,16 @@ int WIPX_Read (int handle, byte *buf, int len, struct qsockaddr *addr)
 	ret = precvfrom (socket, packetBuffer, len+4, 0, (struct sockaddr *)addr, &addrlen);
 	if (ret == -1)
 	{
-		int errno = pWSAGetLastError();
+		int err = pWSAGetLastError();
 
-		if (errno == WSAEWOULDBLOCK || errno == WSAECONNREFUSED)
+		if (err == WSAEWOULDBLOCK || err == WSAECONNREFUSED)
 			return 0;
 
 	}
 
 	if (ret < 4)
 		return 0;
-	
+
 	// remove sequence number, it's only needed for DOS IPX
 	ret -= 4;
 	memcpy(buf, packetBuffer+4, ret);
@@ -357,7 +357,7 @@ int WIPX_GetSocketAddr (int handle, struct qsockaddr *addr)
 	Q_memset(addr, 0, sizeof(struct qsockaddr));
 	if(pgetsockname(socket, (struct sockaddr *)addr, &addrlen) != 0)
 	{
-		int errno = pWSAGetLastError();
+		int err = pWSAGetLastError();
 	}
 
 	return 0;
