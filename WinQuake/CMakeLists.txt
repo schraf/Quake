@@ -1,5 +1,4 @@
 
-
 add_executable(winquake WIN32
 	cd_win.c
 	chase.c

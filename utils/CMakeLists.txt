@@ -1,0 +1,12 @@
+
+add_subdirectory("bspinfo")
+add_subdirectory("common")
+add_subdirectory("light")
+add_subdirectory("modelgen")
+add_subdirectory("qbsp")
+add_subdirectory("qcc")
+add_subdirectory("qfiles")
+add_subdirectory("qlumpy")
+add_subdirectory("sprgen")
+add_subdirectory("texmake")
+add_subdirectory("vis")
