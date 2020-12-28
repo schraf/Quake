@@ -57,6 +57,11 @@ add_executable(winquake WIN32
 	world.c
 	zone.c)
 
-# target_include_directories(client PRIVATE .)
+#if(MSVC)
+#  target_compile_options(winquake PRIVATE /W4 /WX)
+#else()
+#  target_compile_options(winquake PRIVATE -Wall -Wextra -pedantic -Werror)
+#endif()
+
 target_compile_definitions(winquake PRIVATE GLQUAKE)
 target_link_libraries(winquake PRIVATE opengl32 Winmm dxguid Ws2_32 Comctl32)

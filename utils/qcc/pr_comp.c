@@ -1,3 +1,21 @@
+/*  Copyright (C) 1996-1997  Id Software, Inc.
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+    See file, 'COPYING', for details.
+*/
 
 #include "qcc.h"
 
@@ -9,7 +27,7 @@ int			pr_edict_size;
 //========================================
 
 def_t		*pr_scope;		// the function being parsed, or NULL
-qboolean	pr_dumpasm;
+boolean	pr_dumpasm;
 string_t	s_file;			// filename for function definition
 
 int			locals_end;		// for tracking local variables vs temps
@@ -215,13 +233,8 @@ def_t	*PR_ParseImmediate (void)
 // allocate a new one
 	cn = malloc (sizeof(def_t));
 	cn->next = NULL;
-
 	pr.def_tail->next = cn;
 	pr.def_tail = cn;
-
-	cn->search_next = pr.search;
-	pr.search = cn;
-
 	cn->type = pr_immediate_type;
 	cn->name = "IMMEDIATE";
 	cn->initialized = 1;
@@ -728,14 +741,13 @@ If type is NULL, it will match any type
 If allocate is true, a new def will be allocated if it can't be found
 ============
 */
-def_t *PR_GetDef (type_t *type, char *name, def_t *scope, qboolean allocate)
+def_t *PR_GetDef (type_t *type, char *name, def_t *scope, boolean allocate)
 {
-	def_t		*def, **old;
+	def_t		*def;
 	char element[MAX_NAME];
 
 // see if the name is already in use
-	old = &pr.search;
-	for (def = *old ; def ; old=&def->search_next,def = *old)
+	for (def = pr.def_head.next ; def ; def = def->next)
 		if (!strcmp(def->name,name) )
 		{
 			if ( def->scope && def->scope != scope)
@@ -743,11 +755,6 @@ def_t *PR_GetDef (type_t *type, char *name, def_t *scope, qboolean allocate)
 			
 			if (type && def->type != type)
 				PR_ParseError ("Type mismatch on redeclaration of %s",name);
-
-			// move to head of list to find fast next time
-			*old = def->search_next;
-			def->search_next = pr.search;
-			pr.search = def;
 			return def;
 		}
 	
@@ -760,10 +767,7 @@ def_t *PR_GetDef (type_t *type, char *name, def_t *scope, qboolean allocate)
 	def->next = NULL;
 	pr.def_tail->next = def;
 	pr.def_tail = def;
-
-	def->search_next = pr.search;
-	pr.search = def;
-
+	
 	def->name = malloc (strlen(name)+1);
 	strcpy (def->name, name);
 	def->type = type;
@@ -899,7 +903,7 @@ PR_CompileFile
 compiles the 0 terminated text, adding defintions to the pr structure
 ============
 */
-qboolean	PR_CompileFile (char *string, char *filename)
+boolean	PR_CompileFile (char *string, char *filename)
 {	
 	if (!pr.memory)
 		Error ("PR_CompileFile: Didn't clear");

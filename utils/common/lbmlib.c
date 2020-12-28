@@ -99,7 +99,8 @@ byte    bitplanes[9][BPLANESIZE];       // max size 1024 by 9 bit planes
 
 void MungeBitPlanes8 (int width, byte *dest)
 {
-	*dest=width;	// shut up the compiler warning
+	(void)width;
+	(void)dest;
 	Error ("MungeBitPlanes8 not rewritten!");
 #if 0
 asm     les     di,[dest]
@@ -139,7 +140,8 @@ done:
 
 void MungeBitPlanes4 (int width, byte *dest)
 {
-	*dest=width;	// shut up the compiler warning
+	(void)width;
+	(void)dest;
 	Error ("MungeBitPlanes4 not rewritten!");
 #if 0
 
@@ -173,7 +175,8 @@ done:
 
 void MungeBitPlanes2 (int width, byte *dest)
 {
-	*dest=width;	// shut up the compiler warning
+	(void)width;
+	(void)dest;
 	Error ("MungeBitPlanes2 not rewritten!");
 #if 0
 asm     les     di,[dest]
@@ -202,7 +205,8 @@ done:
 
 void MungeBitPlanes1 (int width, byte *dest)
 {
-	*dest=width;	// shut up the compiler warning
+	(void)width;
+	(void)dest;
 	Error ("MungeBitPlanes1 not rewritten!");
 #if 0
 asm     les     di,[dest]

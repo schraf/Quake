@@ -1,3 +1,21 @@
+/*  Copyright (C) 1996-1997  Id Software, Inc.
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+    See file, 'COPYING', for details.
+*/
 
 #include "cmdlib.h"
 #include <stdio.h>
@@ -235,7 +253,6 @@ typedef struct def_s
 	type_t		*type;
 	char		*name;
 	struct def_s	*next;
-	struct def_s	*search_next;	// for finding faster
 	gofs_t		ofs;
 	struct def_s	*scope;		// function the var was defined in, or NULL
 	int			initialized;	// 1 when a declaration included "= immediate"
@@ -293,8 +310,7 @@ typedef struct
 	
 	def_t		def_head;		// unused head of linked list
 	def_t		*def_tail;		// add new defs after this and move it
-	def_t		*search;		// search chain through defs
-
+	
 	int			size_fields;
 } pr_info_t;
 
@@ -305,7 +321,7 @@ typedef struct
 	char		*name;
 	char		*opname;
 	float		priority;
-	qboolean	right_associative;
+	boolean	right_associative;
 	def_t		*type_a, *type_b, *type_c;
 } opcode_t;
 
@@ -314,7 +330,7 @@ typedef struct
 
 extern	opcode_t	pr_opcodes[99];		// sized by initialization
 
-extern	qboolean	pr_dumpasm;
+extern	boolean	pr_dumpasm;
 
 extern	def_t		*pr_global_defs[MAX_REGS];	// to find def for a global variable
 
@@ -338,7 +354,7 @@ void PR_Lex (void);
 type_t *PR_ParseType (void);
 char *PR_ParseName (void);
 
-qboolean PR_Check (char *string);
+boolean PR_Check (char *string);
 void PR_Expect (char *string);
 void PR_ParseError (char *error, ...);
 
@@ -364,14 +380,14 @@ extern	def_t	*pr_scope;
 extern	int		pr_error_count;
 
 void PR_NewLine (void);
-def_t *PR_GetDef (type_t *type, char *name, def_t *scope, qboolean allocate);
+def_t *PR_GetDef (type_t *type, char *name, def_t *scope, boolean allocate);
 
 void PR_PrintDefs (void);
 
 void PR_SkipToSemicolon (void);
 
 extern	char		pr_parm_names[MAX_PARMS][MAX_NAME];
-extern	qboolean	pr_trace;
+extern	boolean	pr_trace;
 
 #define	G_FLOAT(o) (pr_globals[o])
 #define	G_INT(o) (*(int *)&pr_globals[o])
@@ -383,9 +399,9 @@ char *PR_ValueString (etype_t type, void *val);
 
 void PR_ClearGrabMacros (void);
 
-qboolean	PR_CompileFile (char *string, char *filename);
+boolean	PR_CompileFile (char *string, char *filename);
 
-extern	qboolean	pr_dumpasm;
+extern	boolean	pr_dumpasm;
 
 extern	string_t	s_file;			// filename for function definition
 

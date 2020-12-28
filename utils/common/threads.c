@@ -78,9 +78,9 @@ RunThreadsOn
 */
 void RunThreadsOn (int workcnt, qboolean showpacifier, void(*func)(int))
 {
-	int		threadid[MAX_THREADS];
-	HANDLE	threadhandle[MAX_THREADS];
-	int		i;
+	int			threadid[MAX_THREADS];
+	HANDLE		threadhandle[MAX_THREADS];
+	intptr_t	i;
 
 	dispatch = 0;
 	workcount = workcnt;
@@ -175,14 +175,14 @@ void RunThreadsOn (int workcnt, qboolean showpacifier, void(*func)(int))
 		Error ("pthread_attr_create failed");
 	if (pthread_attr_setstacksize (&attrib, 0x100000) == -1)
 		Error ("pthread_attr_setstacksize failed");
-	
+
 	for (i=0 ; i<numthreads ; i++)
 	{
   		if (pthread_create(&work_threads[i], attrib
 		, (pthread_startroutine_t)func, (pthread_addr_t)i) == -1)
 			Error ("pthread_create failed");
 	}
-		
+
 	for (i=0 ; i<numthreads ; i++)
 	{
 		if (pthread_join (work_threads[i], &status) == -1)

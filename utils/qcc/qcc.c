@@ -1,7 +1,25 @@
+/*  Copyright (C) 1996-1997  Id Software, Inc.
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+    See file, 'COPYING', for details.
+*/
 
 #include "qcc.h"
 
-char		sourcedir[1024];
+
 char		destfile[1024];
 
 float		pr_globals[MAX_REGS];
@@ -35,44 +53,41 @@ char		precache_files[MAX_FILES][MAX_DATA_PATH];
 int			precache_files_block[MAX_SOUNDS];
 int			numfiles;
 
+
 /*
-============
-WriteFiles
+=================
+BspModels
 
-  Generates files.dat, which contains all of the
-  data files actually used by the game, to be
-  processed by qfiles.exe
-============
+Runs qbsp and light on all of the models with a .bsp extension
+=================
 */
-void WriteFiles (void)
+void BspModels (void)
 {
-	FILE	*f;
+	int		p;
+	char	*gamedir;
 	int		i;
-	char	filename[1024];
+	char	*m;
+	char	cmd[1024];
+	char	name[256];
 
-	sprintf (filename, "%sfiles.dat", sourcedir);
-	f = fopen (filename, "w");
-	if (!f)
-		Error ("Couldn't open %s", filename);
-
-	fprintf (f, "%i\n", numsounds);
-	for (i=0 ; i<numsounds ; i++)
-		fprintf (f, "%i %s\n", precache_sounds_block[i],
-			precache_sounds[i]);
-
-	fprintf (f, "%i\n", nummodels);
+	p = CheckParm ("-bspmodels");
+	if (!p)
+		return;
+	if (p == myargc-1)
+		Error ("-bspmodels must preceed a game directory");
+	gamedir = myargv[p+1];
+	
 	for (i=0 ; i<nummodels ; i++)
-		fprintf (f, "%i %s\n", precache_models_block[i],
-			precache_models[i]);
-
-	fprintf (f, "%i\n", numfiles);
-	for (i=0 ; i<numfiles ; i++)
-		fprintf (f, "%i %s\n", precache_files_block[i],
-			precache_files[i]);
-
-	fclose (f);
+	{
+		m = precache_models[i];
+		if (strcmp(m+strlen(m)-4, ".bsp"))
+			continue;
+		strcpy (name, m);
+		name[strlen(m)-4] = 0;
+		sprintf (cmd, "qbsp %s/%s ; light -extra %s/%s", gamedir, name, gamedir, name);
+		system (cmd);
+	}
 }
-
 
 // CopyString returns an offset from the string heap
 int	CopyString (char *str)
@@ -169,7 +184,7 @@ void WriteData (int crc)
 	def_t		*def;
 	ddef_t		*dd;
 	dprograms_t	progs;
-	FILE		*h;
+	int			h;
 	int			i;
 
 	for (def = pr.def_head.next ; def ; def = def->next)
@@ -216,11 +231,11 @@ strofs = (strofs+3)&~3;
 	h = SafeOpenWrite (destfile);
 	SafeWrite (h, &progs, sizeof(progs));
 
-	progs.ofs_strings = ftell (h);
+	progs.ofs_strings = lseek (h, 0, SEEK_CUR);
 	progs.numstrings = strofs;
 	SafeWrite (h, strings, strofs);
 
-	progs.ofs_statements = ftell (h);
+	progs.ofs_statements = lseek (h, 0, SEEK_CUR);
 	progs.numstatements = numstatements;
 	for (i=0 ; i<numstatements ; i++)
 	{
@@ -231,7 +246,7 @@ strofs = (strofs+3)&~3;
 	}
 	SafeWrite (h, statements, numstatements*sizeof(dstatement_t));
 
-	progs.ofs_functions = ftell (h);
+	progs.ofs_functions = lseek (h, 0, SEEK_CUR);
 	progs.numfunctions = numfunctions;
 	for (i=0 ; i<numfunctions ; i++)
 	{
@@ -244,7 +259,7 @@ strofs = (strofs+3)&~3;
 	}	
 	SafeWrite (h, functions, numfunctions*sizeof(dfunction_t));
 
-	progs.ofs_globaldefs = ftell (h);
+	progs.ofs_globaldefs = lseek (h, 0, SEEK_CUR);
 	progs.numglobaldefs = numglobaldefs;
 	for (i=0 ; i<numglobaldefs ; i++)
 	{
@@ -254,7 +269,7 @@ strofs = (strofs+3)&~3;
 	}
 	SafeWrite (h, globals, numglobaldefs*sizeof(ddef_t));
 
-	progs.ofs_fielddefs = ftell (h);
+	progs.ofs_fielddefs = lseek (h, 0, SEEK_CUR);
 	progs.numfielddefs = numfielddefs;
 	for (i=0 ; i<numfielddefs ; i++)
 	{
@@ -264,13 +279,13 @@ strofs = (strofs+3)&~3;
 	}
 	SafeWrite (h, fields, numfielddefs*sizeof(ddef_t));
 
-	progs.ofs_globals = ftell (h);
+	progs.ofs_globals = lseek (h, 0, SEEK_CUR);
 	progs.numglobals = numpr_globals;
 	for (i=0 ; i<numpr_globals ; i++)
 		((int *)pr_globals)[i] = LittleLong (((int *)pr_globals)[i]);
 	SafeWrite (h, pr_globals, numpr_globals*4);
 
-	printf ("%6i TOTAL SIZE\n", (int)ftell (h));	
+	printf ("%6i TOTAL SIZE\n", (int)lseek (h, 0, SEEK_CUR));	
 
 	progs.entityfields = pr.size_fields;
 
@@ -280,9 +295,9 @@ strofs = (strofs+3)&~3;
 // byte swap the header and write it out
 	for (i=0 ; i<sizeof(progs)/4 ; i++)
 		((int *)&progs)[i] = LittleLong ( ((int *)&progs)[i] );		
-	fseek (h, 0, SEEK_SET);
+	lseek (h, 0, SEEK_SET);
 	SafeWrite (h, &progs, sizeof(progs));
-	fclose (h);
+	close (h);
 	
 }
 
@@ -556,10 +571,10 @@ called after all files are compiled to check for errors
 Returns false if errors were detected.
 ==============
 */
-qboolean	PR_FinishCompilation (void)
+boolean	PR_FinishCompilation (void)
 {
 	def_t		*d;
-	qboolean	errors;
+	boolean	errors;
 	
 	errors = false;
 	
@@ -581,6 +596,67 @@ qboolean	PR_FinishCompilation (void)
 	return !errors;
 }
 
+//=============================================================================
+
+// FIXME: byte swap?
+
+// this is a 16 bit, non-reflected CRC using the polynomial 0x1021
+// and the initial and final xor values shown below...  in other words, the
+// CCITT standard CRC used by XMODEM
+
+#define CRC_INIT_VALUE	0xffff
+#define CRC_XOR_VALUE	0x0000
+
+static unsigned short crctable[256] =
+{
+	0x0000,	0x1021,	0x2042,	0x3063,	0x4084,	0x50a5,	0x60c6,	0x70e7,
+	0x8108,	0x9129,	0xa14a,	0xb16b,	0xc18c,	0xd1ad,	0xe1ce,	0xf1ef,
+	0x1231,	0x0210,	0x3273,	0x2252,	0x52b5,	0x4294,	0x72f7,	0x62d6,
+	0x9339,	0x8318,	0xb37b,	0xa35a,	0xd3bd,	0xc39c,	0xf3ff,	0xe3de,
+	0x2462,	0x3443,	0x0420,	0x1401,	0x64e6,	0x74c7,	0x44a4,	0x5485,
+	0xa56a,	0xb54b,	0x8528,	0x9509,	0xe5ee,	0xf5cf,	0xc5ac,	0xd58d,
+	0x3653,	0x2672,	0x1611,	0x0630,	0x76d7,	0x66f6,	0x5695,	0x46b4,
+	0xb75b,	0xa77a,	0x9719,	0x8738,	0xf7df,	0xe7fe,	0xd79d,	0xc7bc,
+	0x48c4,	0x58e5,	0x6886,	0x78a7,	0x0840,	0x1861,	0x2802,	0x3823,
+	0xc9cc,	0xd9ed,	0xe98e,	0xf9af,	0x8948,	0x9969,	0xa90a,	0xb92b,
+	0x5af5,	0x4ad4,	0x7ab7,	0x6a96,	0x1a71,	0x0a50,	0x3a33,	0x2a12,
+	0xdbfd,	0xcbdc,	0xfbbf,	0xeb9e,	0x9b79,	0x8b58,	0xbb3b,	0xab1a,
+	0x6ca6,	0x7c87,	0x4ce4,	0x5cc5,	0x2c22,	0x3c03,	0x0c60,	0x1c41,
+	0xedae,	0xfd8f,	0xcdec,	0xddcd,	0xad2a,	0xbd0b,	0x8d68,	0x9d49,
+	0x7e97,	0x6eb6,	0x5ed5,	0x4ef4,	0x3e13,	0x2e32,	0x1e51,	0x0e70,
+	0xff9f,	0xefbe,	0xdfdd,	0xcffc,	0xbf1b,	0xaf3a,	0x9f59,	0x8f78,
+	0x9188,	0x81a9,	0xb1ca,	0xa1eb,	0xd10c,	0xc12d,	0xf14e,	0xe16f,
+	0x1080,	0x00a1,	0x30c2,	0x20e3,	0x5004,	0x4025,	0x7046,	0x6067,
+	0x83b9,	0x9398,	0xa3fb,	0xb3da,	0xc33d,	0xd31c,	0xe37f,	0xf35e,
+	0x02b1,	0x1290,	0x22f3,	0x32d2,	0x4235,	0x5214,	0x6277,	0x7256,
+	0xb5ea,	0xa5cb,	0x95a8,	0x8589,	0xf56e,	0xe54f,	0xd52c,	0xc50d,
+	0x34e2,	0x24c3,	0x14a0,	0x0481,	0x7466,	0x6447,	0x5424,	0x4405,
+	0xa7db,	0xb7fa,	0x8799,	0x97b8,	0xe75f,	0xf77e,	0xc71d,	0xd73c,
+	0x26d3,	0x36f2,	0x0691,	0x16b0,	0x6657,	0x7676,	0x4615,	0x5634,
+	0xd94c,	0xc96d,	0xf90e,	0xe92f,	0x99c8,	0x89e9,	0xb98a,	0xa9ab,
+	0x5844,	0x4865,	0x7806,	0x6827,	0x18c0,	0x08e1,	0x3882,	0x28a3,
+	0xcb7d,	0xdb5c,	0xeb3f,	0xfb1e,	0x8bf9,	0x9bd8,	0xabbb,	0xbb9a,
+	0x4a75,	0x5a54,	0x6a37,	0x7a16,	0x0af1,	0x1ad0,	0x2ab3,	0x3a92,
+	0xfd2e,	0xed0f,	0xdd6c,	0xcd4d,	0xbdaa,	0xad8b,	0x9de8,	0x8dc9,
+	0x7c26,	0x6c07,	0x5c64,	0x4c45,	0x3ca2,	0x2c83,	0x1ce0,	0x0cc1,
+	0xef1f,	0xff3e,	0xcf5d,	0xdf7c,	0xaf9b,	0xbfba,	0x8fd9,	0x9ff8,
+	0x6e17,	0x7e36,	0x4e55,	0x5e74,	0x2e93,	0x3eb2,	0x0ed1,	0x1ef0
+};
+
+void CRC_Init(unsigned short *crcvalue)
+{
+	*crcvalue = CRC_INIT_VALUE;
+}
+
+void CRC_ProcessByte(unsigned short *crcvalue, byte data)
+{
+	*crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
+}
+
+unsigned short CRC_Value(unsigned short crcvalue)
+{
+	return crcvalue ^ CRC_XOR_VALUE;
+}
 //=============================================================================
 
 /*
@@ -675,7 +751,7 @@ int	PR_WriteProgdefs (char *filename)
 	CRC_Init (&crc);
 	f = fopen (filename, "r+");
 	while ((c = fgetc(f)) != EOF)
-		CRC_ProcessByte (&crc, (byte)c);
+		CRC_ProcessByte (&crc, c);
 		
 	fprintf (f,"#define PROGHEADER_CRC %i\n", crc);
 	fclose (f);
@@ -708,6 +784,257 @@ void PrintFunction (char *name)
 	}
 }
 
+/*
+==============================================================================
+
+DIRECTORY COPYING / PACKFILE CREATION
+
+==============================================================================
+*/
+
+typedef struct
+{
+	char	name[56];
+	int		filepos, filelen;
+} packfile_t;
+
+typedef struct
+{
+	char	id[4];
+	int		dirofs;
+	int		dirlen;
+} packheader_t;
+
+packfile_t	pfiles[4096], *pf;
+int			packhandle;
+int			packbytes;
+
+void Sys_mkdir (char *path)
+{
+	if (mkdir (path, 0777) != -1)
+		return;
+	if (errno != EEXIST)
+		Error ("mkdir %s: %s",path, strerror(errno)); 
+}
+
+/*
+============
+CreatePath
+============
+*/
+void	CreatePath (char *path)
+{
+	char	*ofs;
+	
+	for (ofs = path+1 ; *ofs ; ofs++)
+	{
+		if (*ofs == '/')
+		{	// create the directory
+			*ofs = 0;
+			Sys_mkdir (path);
+			*ofs = '/';
+		}
+	}
+}
+
+
+/*
+===========
+PackFile
+
+Copy a file into the pak file
+===========
+*/
+void PackFile (char *src, char *name)
+{
+	int		in;
+	int		remaining, count;
+	char	buf[4096];
+	
+	if ( (byte *)pf - (byte *)pfiles > sizeof(pfiles) )
+		Error ("Too many files in pak file");
+	
+	in = SafeOpenRead (src);
+	remaining = filelength (in);
+
+	pf->filepos = LittleLong (lseek (packhandle, 0, SEEK_CUR));
+	pf->filelen = LittleLong (remaining);
+	strcpy (pf->name, name);
+	printf ("%64s : %7i\n", pf->name, remaining);
+
+	packbytes += remaining;
+	
+	while (remaining)
+	{
+		if (remaining < sizeof(buf))
+			count = remaining;
+		else
+			count = sizeof(buf);
+		SafeRead (in, buf, count);
+		SafeWrite (packhandle, buf, count);
+		remaining -= count;
+	}
+
+	close (in);
+	pf++;
+}
+
+
+/*
+===========
+CopyFile
+
+Copies a file, creating any directories needed
+===========
+*/
+void CopyFile (char *src, char *dest)
+{
+	int		in, out;
+	int		remaining, count;
+	char	buf[4096];
+	
+	printf ("%s to %s\n", src, dest);
+
+	in = SafeOpenRead (src);
+	remaining = filelength (in);
+	
+	CreatePath (dest);
+	out = SafeOpenWrite (dest);
+	
+	while (remaining)
+	{
+		if (remaining < sizeof(buf))
+			count = remaining;
+		else
+			count = sizeof(buf);
+		SafeRead (in, buf, count);
+		SafeWrite (out, buf, count);
+		remaining -= count;
+	}
+
+	close (in);
+	close (out);	
+}
+
+
+/*
+===========
+CopyFiles
+===========
+*/
+void CopyFiles (void)
+{
+	int		i, p;
+	char	srcdir[1024], destdir[1024];
+	char	srcfile[1024], destfile[1024];
+	int		copytype;
+	char	name[1024];
+	packheader_t	header;
+	int		dirlen;
+	int		blocknum;
+	unsigned short		crc;
+
+	printf ("%3i unique precache_sounds\n", numsounds);
+	printf ("%3i unique precache_models\n", nummodels);
+	
+	copytype = 0;
+
+	p = CheckParm ("-copy");
+	if (p && p < myargc-2)
+	{	// create a new directory tree
+		copytype = 1;
+
+		strcpy (srcdir, myargv[p+1]);
+		strcpy (destdir, myargv[p+2]);
+		if (srcdir[strlen(srcdir)-1] != '/')
+			strcat (srcdir, "/");
+		if (destdir[strlen(destdir)-1] != '/')
+			strcat (destdir, "/");
+	}
+
+	blocknum = 1;
+	p = CheckParm ("-pak2");
+	if (p && p <myargc-2)
+		blocknum = 2;
+	else
+		p = CheckParm ("-pak");
+	if (p && p < myargc-2)
+	{	// create a pak file
+		strcpy (srcdir, myargv[p+1]);
+		strcpy (destdir, myargv[p+2]);
+		if (srcdir[strlen(srcdir)-1] != '/')
+			strcat (srcdir, "/");
+		DefaultExtension (destdir, ".pak");
+
+		pf = pfiles;
+		packhandle = SafeOpenWrite (destdir);
+		SafeWrite (packhandle, &header, sizeof(header));	
+		copytype = 2;
+	}
+	
+	if (!copytype)
+		return;
+				
+	for (i=0 ; i<numsounds ; i++)
+	{
+		if (precache_sounds_block[i] != blocknum)
+			continue;
+		sprintf (name, "sound/%s", precache_sounds[i]);
+		sprintf (srcfile,"%s%s",srcdir, name);
+		sprintf (destfile,"%s%s",destdir, name);
+		if (copytype == 1)
+			CopyFile (srcfile, destfile);
+		else
+			PackFile (srcfile, name);
+	}
+	for (i=0 ; i<nummodels ; i++)
+	{
+		if (precache_models_block[i] != blocknum)
+			continue;
+		sprintf (srcfile,"%s%s",srcdir, precache_models[i]);
+		sprintf (destfile,"%s%s",destdir, precache_models[i]);
+		if (copytype == 1)
+			CopyFile (srcfile, destfile);
+		else
+			PackFile (srcfile, precache_models[i]);
+	}
+	for (i=0 ; i<numfiles ; i++)
+	{
+		if (precache_files_block[i] != blocknum)
+			continue;
+		sprintf (srcfile,"%s%s",srcdir, precache_files[i]);
+		sprintf (destfile,"%s%s",destdir, precache_files[i]);
+		if (copytype == 1)
+			CopyFile (srcfile, destfile);
+		else
+			PackFile (srcfile, precache_files[i]);
+	}
+	
+	if (copytype == 2)
+	{
+		header.id[0] = 'P';
+		header.id[1] = 'A';
+		header.id[2] = 'C';
+		header.id[3] = 'K';
+		dirlen = (byte *)pf - (byte *)pfiles;
+		header.dirofs = LittleLong(lseek (packhandle, 0, SEEK_CUR));
+		header.dirlen = LittleLong(dirlen);
+		
+		SafeWrite (packhandle, pfiles, dirlen);
+	
+		lseek (packhandle, 0, SEEK_SET);
+		SafeWrite (packhandle, &header, sizeof(header));
+		close (packhandle);	
+	
+	// do a crc of the file
+		CRC_Init (&crc);
+		for (i=0 ; i<dirlen ; i++)
+			CRC_ProcessByte (&crc, ((byte *)pfiles)[i]);
+	
+		i = pf - pfiles;
+		printf ("%i files packed in %i bytes (%i crc)\n",i, packbytes, crc);
+	}
+}
 
 //============================================================================
 
@@ -722,9 +1049,7 @@ void main (int argc, char **argv)
 	char	*src2;
 	char	filename[1024];
 	int		p, crc;
-	double	start, stop;
-
-	start = I_FloatTime ();
+	char	sourcedir[1024];
 
 	myargc = argc;
 	myargv = argv;
@@ -800,9 +1125,9 @@ void main (int argc, char **argv)
 // write data file
 	WriteData (crc);
 	
-// write files.dat
-	WriteFiles ();
+// regenerate bmodels if -bspmodels
+	BspModels ();
 
-	stop = I_FloatTime ();
-	printf ("%i seconds elapsed.\n", (int)(stop-start));
+// report / copy the data files
+	CopyFiles ();
 }
